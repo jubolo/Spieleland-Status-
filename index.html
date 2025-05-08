@@ -24,12 +24,12 @@
   <div id="segmentLength">Abschnittslänge: Lade...</div>
 
   <script>
-    const apiKey = "EMkqdVoRLjji3gNSOkdS99HHANhiOxEl";  // Ersetze durch deinen echten API-Key
+    const apiKey = "EMkqdVoRLjji3gNSOkdS99HHANhiOxEl";  // Dein API-Key
     const lat = 47.709792;
     const lon = 9.591751;
 
     function entfernung(lat1, lon1, lat2, lon2) {
-      const R = 6371e3; // Erdradius in Metern
+      const R = 6371e3;
       const toRad = deg => deg * Math.PI / 180;
       const dLat = toRad(lat2 - lat1);
       const dLon = toRad(lon2 - lon1);
@@ -37,7 +37,7 @@
                 Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
                 Math.sin(dLon/2) * Math.sin(dLon/2);
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      return R * c; // in Metern
+      return R * c;
     }
 
     async function schätzeBesucher() {
@@ -46,9 +46,11 @@
         const response = await fetch(url);
         const data = await response.json();
 
-        const speed = data.flowSegmentData.currentSpeed;
-        const confidence = data.flowSegmentData.confidence;
-        const coords = data.flowSegmentData.coordinates.coordinate;
+        const segment = data.flowSegmentData;
+        const speed = segment.currentSpeed;
+        const freeFlow = segment.freeFlowSpeed;
+        const confidence = segment.confidence;
+        const coords = segment.coordinates.coordinate;
 
         // Abschnittslänge berechnen
         let gesamtStrecke = 0;
@@ -59,19 +61,19 @@
         }
         const streckeInKm = (gesamtStrecke / 1000).toFixed(2);
 
-        document.getElementById("currentSpeed").innerText = `Aktuelle Geschwindigkeit: ${speed} km/h`;
+        // Live anzeigen
+        document.getElementById("currentSpeed").innerText = `Aktuelle Geschwindigkeit: ${speed} km/h (frei: ${freeFlow} km/h)`;
         document.getElementById("segmentLength").innerText = `Abschnittslänge: ${streckeInKm} km`;
 
-        let fahrzeugeProStunde;
-        if (speed < 15 && confidence > 0.5) {
-          fahrzeugeProStunde = 180;
-        } else if (speed < 30) {
-          fahrzeugeProStunde = 120;
-        } else {
-          fahrzeugeProStunde = 60;
-        }
+        // 🚦 Besucher-Schätzmodell
+        const staudifferenz = Math.max(0, freeFlow - speed);
+        const staustufe = staudifferenz / freeFlow;  // z.B. 0.5 bei 50% Reduktion
+        const gewichteteIntensität = staustufe * confidence;
 
-        const besucher = Math.round(fahrzeugeProStunde * 3.2);
+        // Basierend auf Abschnittslänge (in km) & geschätztem Fahrzeugfluss
+        const fahrzeugeProStunde = gewichteteIntensität * 1000 * streckeInKm; // grober Faktor
+        const besucher = Math.round(fahrzeugeProStunde * 2.8); // 2.8 Pers. pro Fahrzeug
+
         document.getElementById("count").innerText = `${besucher} geschätzte Besucher`;
       } catch (err) {
         console.error(err);
@@ -86,5 +88,3 @@
   </script>
 </body>
 </html>
-</html>
-
