@@ -33,6 +33,8 @@
   <div class="value" id="staustufe"></div>
   <div class="value" id="segmentLength"></div>
   <div class="value" id="fahrzeuge"></div>
+  <div class="value" id="fahrzeugeProMinute"></div>
+  <div class="value" id="fahrzeugDichte"></div>
   <div class="value" id="startCoordinates"></div>
   <div class="value" id="endCoordinates"></div>
 
@@ -41,12 +43,12 @@
   </div>
 
   <script>
-    const apiKey = "EMkqdVoRLjji3gNSOkdS99HHANhiOxEl";  // Dein API-Key
+    const apiKey = "EMkqdVoRLjji3gNSOkdS99HHANhiOxEl";
     const lat = 47.709792;
     const lon = 9.591751;
 
     function entfernung(lat1, lon1, lat2, lon2) {
-      const R = 6371e3;  // Erdradius in Metern
+      const R = 6371e3;
       const toRad = deg => deg * Math.PI / 180;
       const dLat = toRad(lat2 - lat1);
       const dLon = toRad(lon2 - lon1);
@@ -54,7 +56,17 @@
                 Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
                 Math.sin(dLon/2) * Math.sin(dLon/2);
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      return R * c;  // in Metern
+      return R * c;
+    }
+
+    function berechneFahrzeugdichte(currentSpeed, freeFlowSpeed) {
+      const ratio = currentSpeed / freeFlowSpeed;
+      if (ratio >= 1.0) return 1;
+      if (ratio >= 0.9) return 2;
+      if (ratio >= 0.7) return 40;
+      if (ratio >= 0.5) return 60;
+      if (ratio >= 0.3) return 80;
+      return 100;
     }
 
     async function schätzeBesucher() {
@@ -69,11 +81,9 @@
         const confidence = segment.confidence;
         const coords = segment.coordinates.coordinate;
 
-        // Start- und Endpunkt
         const startpunkt = coords[0];
         const endpunkt = coords[coords.length - 1];
 
-        // Abschnittslänge berechnen
         let gesamtStrecke = 0;
         for (let i = 0; i < coords.length - 1; i++) {
           const p1 = coords[i];
@@ -82,14 +92,16 @@
         }
         const streckeInKm = (gesamtStrecke / 1000).toFixed(2);
 
-        // Rechendaten
         const staudifferenz = Math.max(0, freeFlow - speed);
         const staustufe = (staudifferenz / freeFlow).toFixed(2);
-        const gewichteteIntensität = staudifferenz / freeFlow * confidence;
-        const fahrzeugeProStunde = Math.round(gewichteteIntensität * 1000 * streckeInKm);
+
+        // Neue Fahrzeugdichte-Berechnung
+        const fahrzeugDichte = berechneFahrzeugdichte(speed, freeFlow); // Fahrzeuge/km
+        const fahrzeugeProStunde = Math.round(speed * fahrzeugDichte);  // v * Dichte
+        const fahrzeugeProMinute = Math.round(fahrzeugeProStunde / 60);
         const besucher = Math.round(fahrzeugeProStunde * 2.8);
 
-        // Anzeige
+        // Ausgabe
         document.getElementById("count").innerText = `🚗 Geschätzte Besucher: ${besucher}`;
         document.getElementById("currentSpeed").innerText = `Aktuelle Geschwindigkeit: ${speed} km/h`;
         document.getElementById("freeFlowSpeed").innerText = `Freie Geschwindigkeit: ${freeFlow} km/h`;
@@ -97,9 +109,9 @@
         document.getElementById("staudifferenz").innerText = `Staudifferenz: ${staudifferenz} km/h`;
         document.getElementById("staustufe").innerText = `Stauausmaß (Anteil): ${staustufe}`;
         document.getElementById("segmentLength").innerText = `Abschnittslänge: ${streckeInKm} km`;
-        document.getElementById("fahrzeuge").innerText = `Fahrzeuge pro Stunde (geschätzt): ${fahrzeugeProStunde}`;
-
-        // Koordinaten Start und Ende anzeigen
+        document.getElementById("fahrzeuge").innerText = `Fahrzeuge pro Stunde: ${fahrzeugeProStunde}`;
+        document.getElementById("fahrzeugeProMinute").innerText = `Fahrzeuge pro Minute: ${fahrzeugeProMinute}`;
+        document.getElementById("fahrzeugDichte").innerText = `Fahrzeugdichte: ${fahrzeugDichte} Fahrzeuge/km`;
         document.getElementById("startCoordinates").innerText = `Start Koordinaten: ${startpunkt.latitude}, ${startpunkt.longitude}`;
         document.getElementById("endCoordinates").innerText = `End Koordinaten: ${endpunkt.latitude}, ${endpunkt.longitude}`;
 
