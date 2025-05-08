@@ -33,6 +33,8 @@
   <div class="value" id="staustufe"></div>
   <div class="value" id="segmentLength"></div>
   <div class="value" id="fahrzeuge"></div>
+  <div class="value" id="startCoordinates"></div>
+  <div class="value" id="endCoordinates"></div>
 
   <div class="section">
     <small>Aktualisierung alle 60 Sekunden</small>
@@ -42,15 +44,9 @@
     const apiKey = "EMkqdVoRLjji3gNSOkdS99HHANhiOxEl";  // Dein API-Key
     const lat = 47.709792;
     const lon = 9.591751;
-const coords = data.flowSegmentData.coordinates.coordinate;
-const startpunkt = coords[0];
-const endpunkt = coords[coords.length - 1];
-
-console.log("Start:", startpunkt.latitude, startpunkt.longitude);
-console.log("Ende:", endpunkt.latitude, endpunkt.longitude);
 
     function entfernung(lat1, lon1, lat2, lon2) {
-      const R = 6371e3;
+      const R = 6371e3;  // Erdradius in Metern
       const toRad = deg => deg * Math.PI / 180;
       const dLat = toRad(lat2 - lat1);
       const dLon = toRad(lon2 - lon1);
@@ -58,7 +54,7 @@ console.log("Ende:", endpunkt.latitude, endpunkt.longitude);
                 Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
                 Math.sin(dLon/2) * Math.sin(dLon/2);
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      return R * c;
+      return R * c;  // in Metern
     }
 
     async function schätzeBesucher() {
@@ -72,6 +68,10 @@ console.log("Ende:", endpunkt.latitude, endpunkt.longitude);
         const freeFlow = segment.freeFlowSpeed;
         const confidence = segment.confidence;
         const coords = segment.coordinates.coordinate;
+
+        // Start- und Endpunkt
+        const startpunkt = coords[0];
+        const endpunkt = coords[coords.length - 1];
 
         // Abschnittslänge berechnen
         let gesamtStrecke = 0;
@@ -98,9 +98,16 @@ console.log("Ende:", endpunkt.latitude, endpunkt.longitude);
         document.getElementById("staustufe").innerText = `Stauausmaß (Anteil): ${staustufe}`;
         document.getElementById("segmentLength").innerText = `Abschnittslänge: ${streckeInKm} km`;
         document.getElementById("fahrzeuge").innerText = `Fahrzeuge pro Stunde (geschätzt): ${fahrzeugeProStunde}`;
+
+        // Koordinaten Start und Ende anzeigen
+        document.getElementById("startCoordinates").innerText = `Start Koordinaten: ${startpunkt.latitude}, ${startpunkt.longitude}`;
+        document.getElementById("endCoordinates").innerText = `End Koordinaten: ${endpunkt.latitude}, ${endpunkt.longitude}`;
+
       } catch (err) {
         console.error(err);
         document.getElementById("count").innerText = "❌ Fehler beim Laden.";
+        document.getElementById("startCoordinates").innerText = "❌ Fehler bei den Startkoordinaten.";
+        document.getElementById("endCoordinates").innerText = "❌ Fehler bei den Endkoordinaten.";
       }
     }
 
