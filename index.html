@@ -10,18 +10,33 @@
       text-align: center;
       padding: 2rem;
     }
-    #count, #currentSpeed, #segmentLength {
-      font-size: 1.5em;
-      margin: 1rem;
+    .value {
+      font-size: 1.2em;
+      margin: 0.5rem;
+    }
+    .section {
+      margin-top: 2rem;
+      padding-top: 1rem;
+      border-top: 1px solid #ccc;
     }
   </style>
 </head>
 <body>
   <h1>Live-Besucherschätzung</h1>
   <p>Basierend auf Verkehrsdaten (TomTom Traffic API)</p>
-  <div id="count">Lade...</div>
-  <div id="currentSpeed">Aktuelle Geschwindigkeit: Lade...</div>
-  <div id="segmentLength">Abschnittslänge: Lade...</div>
+
+  <div class="value" id="count">Lade Besucherschätzung...</div>
+  <div class="value" id="currentSpeed"></div>
+  <div class="value" id="freeFlowSpeed"></div>
+  <div class="value" id="confidence"></div>
+  <div class="value" id="staudifferenz"></div>
+  <div class="value" id="staustufe"></div>
+  <div class="value" id="segmentLength"></div>
+  <div class="value" id="fahrzeuge"></div>
+
+  <div class="section">
+    <small>Aktualisierung alle 60 Sekunden</small>
+  </div>
 
   <script>
     const apiKey = "EMkqdVoRLjji3gNSOkdS99HHANhiOxEl";  // Dein API-Key
@@ -61,25 +76,25 @@
         }
         const streckeInKm = (gesamtStrecke / 1000).toFixed(2);
 
-        // Live anzeigen
-        document.getElementById("currentSpeed").innerText = `Aktuelle Geschwindigkeit: ${speed} km/h (frei: ${freeFlow} km/h)`;
-        document.getElementById("segmentLength").innerText = `Abschnittslänge: ${streckeInKm} km`;
-
-        // 🚦 Besucher-Schätzmodell
+        // Rechendaten
         const staudifferenz = Math.max(0, freeFlow - speed);
-        const staustufe = staudifferenz / freeFlow;  // z.B. 0.5 bei 50% Reduktion
-        const gewichteteIntensität = staustufe * confidence;
+        const staustufe = (staudifferenz / freeFlow).toFixed(2);
+        const gewichteteIntensität = staudifferenz / freeFlow * confidence;
+        const fahrzeugeProStunde = Math.round(gewichteteIntensität * 1000 * streckeInKm);
+        const besucher = Math.round(fahrzeugeProStunde * 2.8);
 
-        // Basierend auf Abschnittslänge (in km) & geschätztem Fahrzeugfluss
-        const fahrzeugeProStunde = gewichteteIntensität * 1000 * streckeInKm; // grober Faktor
-        const besucher = Math.round(fahrzeugeProStunde * 2.8); // 2.8 Pers. pro Fahrzeug
-
-        document.getElementById("count").innerText = `${besucher} geschätzte Besucher`;
+        // Anzeige
+        document.getElementById("count").innerText = `🚗 Geschätzte Besucher: ${besucher}`;
+        document.getElementById("currentSpeed").innerText = `Aktuelle Geschwindigkeit: ${speed} km/h`;
+        document.getElementById("freeFlowSpeed").innerText = `Freie Geschwindigkeit: ${freeFlow} km/h`;
+        document.getElementById("confidence").innerText = `Vertrauenslevel: ${confidence}`;
+        document.getElementById("staudifferenz").innerText = `Staudifferenz: ${staudifferenz} km/h`;
+        document.getElementById("staustufe").innerText = `Stauausmaß (Anteil): ${staustufe}`;
+        document.getElementById("segmentLength").innerText = `Abschnittslänge: ${streckeInKm} km`;
+        document.getElementById("fahrzeuge").innerText = `Fahrzeuge pro Stunde (geschätzt): ${fahrzeugeProStunde}`;
       } catch (err) {
         console.error(err);
-        document.getElementById("count").innerText = "Fehler beim Laden.";
-        document.getElementById("currentSpeed").innerText = "Fehler beim Laden der Geschwindigkeit.";
-        document.getElementById("segmentLength").innerText = "Fehler beim Laden der Abschnittslänge.";
+        document.getElementById("count").innerText = "❌ Fehler beim Laden.";
       }
     }
 
