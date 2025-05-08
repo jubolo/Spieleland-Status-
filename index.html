@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -15,12 +14,17 @@
       font-size: 3em;
       color: green;
     }
+    #currentSpeed {
+      font-size: 1.5em;
+      color: blue;
+    }
   </style>
 </head>
 <body>
   <h1>Live-Besucherschätzung</h1>
   <p>Basierend auf Verkehrsdaten (TomTom Traffic API)</p>
   <div id="count">Lade...</div>
+  <div id="currentSpeed">Aktuelle Geschwindigkeit: Lade...</div>
 
   <script>
     const apiKey = "mOguY7YpMoGnQqTSuvdyCWJoZZ8puiW2";
@@ -36,6 +40,9 @@
         const speed = data.flowSegmentData.currentSpeed;
         const confidence = data.flowSegmentData.confidence;
 
+        // Zeige die aktuelle Geschwindigkeit an
+        document.getElementById("currentSpeed").innerText = `Aktuelle Geschwindigkeit: ${speed} km/h`;
+
         let fahrzeugeProStunde;
         if (speed < 15 && confidence > 0.5) {
           fahrzeugeProStunde = 180;
@@ -49,7 +56,8 @@
         document.getElementById("count").innerText = `${besucher} geschätzte Besucher`;
       } catch (err) {
         console.error(err);
-        document.getElementById("count").innerText = "Fehleer beim Laden.";
+        document.getElementById("count").innerText = "Fehler beim Laden.";
+        document.getElementById("currentSpeed").innerText = "Fehler beim Laden der Geschwindigkeit.";
       }
     }
 
@@ -58,3 +66,4 @@
   </script>
 </body>
 </html>
+
