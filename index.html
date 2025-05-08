@@ -10,13 +10,9 @@
       text-align: center;
       padding: 2rem;
     }
-    #count {
-      font-size: 3em;
-      color: green;
-    }
-    #currentSpeed {
+    #count, #currentSpeed, #segmentLength {
       font-size: 1.5em;
-      color: blue;
+      margin: 1rem;
     }
   </style>
 </head>
@@ -25,11 +21,24 @@
   <p>Basierend auf Verkehrsdaten (TomTom Traffic API)</p>
   <div id="count">Lade...</div>
   <div id="currentSpeed">Aktuelle Geschwindigkeit: Lade...</div>
+  <div id="segmentLength">Abschnittslänge: Lade...</div>
 
   <script>
-    const apiKey = "mOguY7YpMoGnQqTSuvdyCWJoZZ8puiW2";
-    const lat = 47.7765;     // Beispielkoordinaten nahe Ravensburger Spieleland
+    const apiKey = "EMkqdVoRLjji3gNSOkdS99HHANhiOxEl";  // Ersetze durch deinen echten API-Key
+    const lat = 47.7765;
     const lon = 9.6136;
+
+    function entfernung(lat1, lon1, lat2, lon2) {
+      const R = 6371e3; // Erdradius in Metern
+      const toRad = deg => deg * Math.PI / 180;
+      const dLat = toRad(lat2 - lat1);
+      const dLon = toRad(lon2 - lon1);
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c; // in Metern
+    }
 
     async function schätzeBesucher() {
       try {
@@ -39,9 +48,19 @@
 
         const speed = data.flowSegmentData.currentSpeed;
         const confidence = data.flowSegmentData.confidence;
+        const coords = data.flowSegmentData.coordinates.coordinate;
 
-        // Zeige die aktuelle Geschwindigkeit an
+        // Abschnittslänge berechnen
+        let gesamtStrecke = 0;
+        for (let i = 0; i < coords.length - 1; i++) {
+          const p1 = coords[i];
+          const p2 = coords[i + 1];
+          gesamtStrecke += entfernung(p1.latitude, p1.longitude, p2.latitude, p2.longitude);
+        }
+        const streckeInKm = (gesamtStrecke / 1000).toFixed(2);
+
         document.getElementById("currentSpeed").innerText = `Aktuelle Geschwindigkeit: ${speed} km/h`;
+        document.getElementById("segmentLength").innerText = `Abschnittslänge: ${streckeInKm} km`;
 
         let fahrzeugeProStunde;
         if (speed < 15 && confidence > 0.5) {
@@ -58,12 +77,14 @@
         console.error(err);
         document.getElementById("count").innerText = "Fehler beim Laden.";
         document.getElementById("currentSpeed").innerText = "Fehler beim Laden der Geschwindigkeit.";
+        document.getElementById("segmentLength").innerText = "Fehler beim Laden der Abschnittslänge.";
       }
     }
 
     schätzeBesucher();
-    setInterval(schätzeBesucher, 60000); // alle 60 Sekunden aktualisieren
+    setInterval(schätzeBesucher, 60000);
   </script>
 </body>
+</html>
 </html>
 
