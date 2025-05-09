@@ -20,6 +20,7 @@
       border-top: 1px solid #ccc;
     }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <h1>Live-Besucherschätzung</h1>
@@ -39,6 +40,11 @@
   <div class="value" id="endCoordinates"></div>
 
   <div class="section">
+    <h2>Verlauf: Aktuelle Geschwindigkeit</h2>
+    <canvas id="speedChart" width="400" height="200"></canvas>
+  </div>
+
+  <div class="section">
     <small>Aktualisierung alle 60 Sekunden</small>
   </div>
 
@@ -46,6 +52,10 @@
     const apiKey = "EMkqdVoRLjji3gNSOkdS99HHANhiOxEl";
     const lat = 47.709792;
     const lon = 9.591751;
+
+    const speedHistory = [];
+    const timeLabels = [];
+    let chart = null;
 
     function entfernung(lat1, lon1, lat2, lon2) {
       const R = 6371e3;
@@ -67,6 +77,51 @@
       if (ratio >= 0.5) return 60;
       if (ratio >= 0.3) return 80;
       return 100;
+    }
+
+    function updateChart(speed) {
+      const now = new Date().toLocaleTimeString();
+
+      speedHistory.push(speed);
+      timeLabels.push(now);
+
+      if (speedHistory.length > 20) {
+        speedHistory.shift();
+        timeLabels.shift();
+      }
+
+      if (!chart) {
+        const ctx = document.getElementById("speedChart").getContext("2d");
+        chart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: timeLabels,
+            datasets: [{
+              label: 'Aktuelle Geschwindigkeit (km/h)',
+              data: speedHistory,
+              fill: false,
+              borderColor: 'blue',
+              tension: 0.1
+            }]
+          },
+          options: {
+            responsive: true,
+            scales: {
+              y: {
+                min: 0,
+                title: {
+                  display: true,
+                  text: 'km/h'
+                }
+              }
+            }
+          }
+        });
+      } else {
+        chart.data.labels = timeLabels;
+        chart.data.datasets[0].data = speedHistory;
+        chart.update();
+      }
     }
 
     async function schätzeBesucher() {
@@ -95,13 +150,11 @@
         const staudifferenz = Math.max(0, freeFlow - speed);
         const staustufe = (staudifferenz / freeFlow).toFixed(2);
 
-        // Neue Fahrzeugdichte-Berechnung
-        const fahrzeugDichte = berechneFahrzeugdichte(speed, freeFlow); // Fahrzeuge/km
-        const fahrzeugeProStunde = Math.round(speed * fahrzeugDichte);  // v * Dichte
+        const fahrzeugDichte = berechneFahrzeugdichte(speed, freeFlow);
+        const fahrzeugeProStunde = Math.round(speed * fahrzeugDichte);
         const fahrzeugeProMinute = Math.round(fahrzeugeProStunde / 60);
         const besucher = Math.round(fahrzeugeProStunde * 2.8);
 
-        // Ausgabe
         document.getElementById("count").innerText = `🚗 Geschätzte Besucher: ${besucher}`;
         document.getElementById("currentSpeed").innerText = `Aktuelle Geschwindigkeit: ${speed} km/h`;
         document.getElementById("freeFlowSpeed").innerText = `Freie Geschwindigkeit: ${freeFlow} km/h`;
@@ -114,6 +167,8 @@
         document.getElementById("fahrzeugDichte").innerText = `Fahrzeugdichte: ${fahrzeugDichte} Fahrzeuge/km`;
         document.getElementById("startCoordinates").innerText = `Start Koordinaten: ${startpunkt.latitude}, ${startpunkt.longitude}`;
         document.getElementById("endCoordinates").innerText = `End Koordinaten: ${endpunkt.latitude}, ${endpunkt.longitude}`;
+
+        updateChart(speed);
 
       } catch (err) {
         console.error(err);
